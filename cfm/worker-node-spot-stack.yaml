@@ -1,0 +1,423 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon EKS - Spot Node Group'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "EKS Configuration"
+        Parameters:
+          - ClusterName
+          - ContainerRuntime
+          - ClusterControlPlaneSecurityGroup
+          - NodeInstanceProfileArn
+          - ExistingNodeSecurityGroups
+          - NodeImageId
+          - VpcId
+          - KeyName
+          - NodeGroupName
+          - Subnets
+          - BootstrapArgumentsForOnDemand
+          - BootstrapArgumentsForSpot
+      - Label:
+          default: "Auto Scaling Configuration"
+        Parameters:
+          - NodeAutoScalingGroupMinSize
+          - NodeAutoScalingGroupDesiredCapacity
+          - NodeAutoScalingGroupMaxSize
+          - NodeInstanceType
+          - NodeVolumeSize
+          - NodeVolumeType
+          - ASGAutoAssignPublicIp
+          - ASGMetricsEnabled
+          - OnDemandBaseCapacity
+          - OnDemandPercentageAboveBaseCapacity
+          - InstanceTypesOverride
+          - SpotAllocStrategy
+
+Parameters:
+  VpcId:
+    Description: The VPC of the worker instances
+    Type: AWS::EC2::VPC::Id
+
+  Subnets:
+    Description: Select 3 subnets where workers can be created.
+    Type: List<AWS::EC2::Subnet::Id>
+
+  NodeInstanceProfileArn:
+    Type: String
+    Description: Node Instance profile Arn vaule
+
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+
+  NodeImageId:
+    Type: AWS::EC2::Image::Id
+    Description: Find the latest AMI id here - https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html
+
+  NodeInstanceType:
+    Description: Default EC2 instance type for the node instances.
+    Type: String
+    Default: m5.large
+    AllowedValues:
+      - m5.large
+      - m5d.large
+      - m5a.large
+      - m5ad.large
+      - m5n.large
+      - m5dn.large
+      - m5.xlarge
+    ConstraintDescription: Must be a valid EC2 instance type
+
+  NodeVolumeSize:
+    Type: Number
+    Default: 25
+
+  NodeVolumeType:
+    Type: String
+    Default: "gp3"
+
+  NodeAutoScalingGroupMinSize:
+    Type: Number
+    Description: Minimum size of Node Group ASG.
+
+  NodeAutoScalingGroupDesiredCapacity:
+    Type: Number
+    Description: Desired size of Node Group ASG.
+
+  NodeAutoScalingGroupMaxSize:
+    Type: Number
+    Description: Maximum size of Node Group ASG.
+    Default: 10
+
+  ASGAutoAssignPublicIp:
+    Type: String
+    Description: "auto assign public IP address for ASG instances"
+    AllowedValues:
+      - "yes"
+      - "no"
+    Default: "yes"
+
+  OnDemandBaseCapacity:
+    Type: Number
+    Description: "on-demand base capacity"
+    Default: 1
+
+  OnDemandPercentageAboveBaseCapacity:
+    Type: Number
+    Description: "on-demand percentage above base capacity(0-100)"
+
+  InstanceTypesOverride:
+    Type: String
+    Description: "multiple spot instances to override(seperated by comma)"
+
+  ExistingNodeSecurityGroups:
+    Type: String
+    Description: Use the existing Security Group for your nodegroup
+    Default: ""
+
+  ClusterName:
+    Description: The cluster name provided when the cluster was created.  If it is incorrect, nodes will not be able to join the cluster.
+    Type: String
+
+  ContainerRuntime:
+    Description: EKS worker nodes runtime. Defaults to dockerd and you can opt-in to containerd runtime.
+    Type: String
+    AllowedValues:
+      - "dockerd"
+      - "containerd"
+    Default: "containerd"
+
+  BootstrapArgumentsForOnDemand:
+    Description: Arguments to pass to the bootstrap script. See files/bootstrap.sh in https://github.com/awslabs/amazon-eks-ami
+    Default: "--kubelet-extra-args --node-labels=lifecycle=OnDemand"
+    Type: String
+
+  BootstrapArgumentsForSpot:
+    Description: Arguments to pass to the bootstrap script. See files/bootstrap.sh in https://github.com/awslabs/amazon-eks-ami
+    Default: "--kubelet-extra-args '--node-labels=lifecycle=Ec2Spot --register-with-taints=spotInstance=true:PreferNoSchedule'"
+    Type: String
+
+  ClusterControlPlaneSecurityGroup:
+    Description: The security group of the cluster control plane.
+    Type: AWS::EC2::SecurityGroup::Id
+
+  NodeGroupName:
+    Description: Unique identifier for the Node Group.
+    Type: String
+
+  SpotAllocStrategy:
+    Type: String
+
+  ASGMetricsEnabled:
+    Type: String
+    AllowedValues:
+      - "yes"
+      - "no"
+    Default: "no"
+
+  RestrictMetadata:
+    Description: Restrict access to amazon ec2 instance profile credentials
+    Type: String
+    AllowedValues:
+      - "yes"
+      - "no"
+    Default: "no"
+
+Conditions:
+  IsASGAutoAssignPublicIp: !Equals [ !Ref ASGAutoAssignPublicIp , "yes" ]
+  IsASGMetricsEnabled: !Equals [ !Ref ASGMetricsEnabled , "yes" ]
+
+Resources:
+
+  NodeGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Ref NodeGroupName
+      DesiredCapacity: !Ref NodeAutoScalingGroupDesiredCapacity
+      MixedInstancesPolicy:
+        InstancesDistribution:
+          OnDemandAllocationStrategy: prioritized
+          OnDemandBaseCapacity: !Ref OnDemandBaseCapacity
+          OnDemandPercentageAboveBaseCapacity: !Ref OnDemandPercentageAboveBaseCapacity
+          SpotAllocationStrategy: !Ref SpotAllocStrategy
+        LaunchTemplate:
+          LaunchTemplateSpecification:
+            LaunchTemplateId: !Ref SpotLaunchTemplate
+            Version: !GetAtt SpotLaunchTemplate.LatestVersionNumber
+          Overrides:
+            - InstanceType: !Select [0, !Split [ ",", !Ref InstanceTypesOverride ] ]
+            - InstanceType: !Select [1, !Split [ ",", !Ref InstanceTypesOverride ] ]
+            - InstanceType: !Select [2, !Split [ ",", !Ref InstanceTypesOverride ] ]
+            - InstanceType: !Select [3, !Split [ ",", !Ref InstanceTypesOverride ] ]
+            - InstanceType: !Select [4, !Split [ ",", !Ref InstanceTypesOverride ] ]
+            - InstanceType: !Select [5, !Split [ ",", !Ref InstanceTypesOverride ] ]
+
+      MinSize: !Ref NodeAutoScalingGroupMinSize
+      MaxSize: !Ref NodeAutoScalingGroupMaxSize
+      MetricsCollection:
+      - Fn::If:
+        - IsASGMetricsEnabled
+        -
+          Granularity: 1Minute
+          Metrics:
+            - "GroupMinSize"
+            - "GroupMaxSize"
+            - "GroupDesiredCapacity"
+            - "GroupInServiceInstances"
+            - "GroupPendingInstances"
+        - !Ref 'AWS::NoValue'
+      VPCZoneIdentifier:
+        !Ref Subnets
+      Tags:
+      - Key: Name
+        Value: !Sub "${ClusterName}-worker-node"
+        PropagateAtLaunch: true
+      - Key: !Sub 'kubernetes.io/cluster/${ClusterName}'
+        Value: 'owned'
+        PropagateAtLaunch: true
+      - Key: k8s.io/cluster-autoscaler/enabled
+        Value: 'owned'
+        PropagateAtLaunch: true
+      - Key: !Sub k8s.io/cluster-autoscaler/${ClusterName}
+        Value: 'true'
+        PropagateAtLaunch: true
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: !Ref NodeAutoScalingGroupDesiredCapacity
+        MaxBatchSize: '1'
+        PauseTime: 'PT3M'
+
+  LCH:
+    Type: AWS::AutoScaling::LifecycleHook
+    Properties:
+      AutoScalingGroupName: !Ref NodeGroup
+      HeartbeatTimeout: 180
+      DefaultResult: CONTINUE
+      LifecycleHookName: !Sub "${NodeGroupName}-lifecycle-hook"
+      LifecycleTransition: autoscaling:EC2_INSTANCE_TERMINATING
+
+#
+# Launch Template
+#
+  SpotLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "launch-template-${AWS::StackName}"
+      LaunchTemplateData:
+        InstanceType: !Select [0, !Split [ ",", !Ref InstanceTypesOverride ] ]
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub "${NodeGroupName}-ASG-Node"
+              - Key: KubernetesCluster
+                Value: !Ref ClusterName
+              - Key: !Sub 'kubernetes.io/cluster/${ClusterName}'
+                Value: 'owned'
+        UserData:
+          Fn::Base64:
+            !Sub |
+            #!/bin/bash
+            set -ex
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+            # if [[ "${RestrictMetadata}" == "no" ]];
+            # then
+            #   yum install -y iptables-services
+            #   iptables --insert FORWARD 1 --in-interface eni+ --destination 169.254.169.254/32 --jump DROP
+            #   iptables-save | tee /etc/sysconfig/iptables
+            #   systemctl enable --now iptables
+            # fi
+
+            sudo systemctl start amazon-ssm-agent || true
+
+            # Sysctl Kernel optimization changes
+            ## Disable IPv6
+            cat <<EOF >/etc/sysctl.d/10-disable-ipv6.conf
+            # disable ipv6 config
+            net.ipv6.conf.all.disable_ipv6 = 1
+            net.ipv6.conf.default.disable_ipv6 = 1
+            net.ipv6.conf.lo.disable_ipv6 = 1
+            EOF
+
+            ## Kube network optimisation.
+            cat <<EOF >/etc/sysctl.d/99-kube-net.conf
+            # Have a larger connection range available
+            net.ipv4.ip_local_port_range=1024 65535
+
+            # The maximum number of "backlogged sockets".  Default is 128.
+            net.core.somaxconn=65535
+            net.core.netdev_max_backlog=65536
+
+            # 32MB per socket - which sounds like a lot,
+            # but will virtually never consume that much.
+            net.core.rmem_max=33554432
+            net.core.wmem_max=33554432
+
+            # Increase the maximum amount of option memory buffers
+            net.core.optmem_max=25165824
+
+            # Default Socket Receive Buffer
+            net.core.rmem_default=31457280
+
+            # Default Socket Send Buffer
+            net.core.wmem_default=31457280
+
+            # Various network tunables
+            # Increase the number of outstanding syn requests allowed.
+            net.ipv4.tcp_max_syn_backlog=20480
+            net.ipv4.tcp_max_tw_buckets=400000
+            net.ipv4.tcp_no_metrics_save=1
+
+            # Increase the maximum total buffer-space allocatable
+            # This is measured in units of pages (4096 bytes)
+            net.ipv4.tcp_mem=786432 1048576 26777216
+            net.ipv4.udp_mem=65536 131072 262144
+
+            # Increase the read-buffer space allocatable
+            net.ipv4.tcp_rmem=8192 87380 33554432
+            net.ipv4.udp_rmem_min=16384
+
+            # Increase the write-buffer-space allocatable
+            net.ipv4.tcp_wmem=8192 65536 33554432
+            net.ipv4.udp_wmem_min=16384
+
+            # Increase the tcp-time-wait buckets pool size to prevent simple DOS attacks
+            net.ipv4.tcp_max_tw_buckets=1440000
+            net.ipv4.tcp_tw_reuse=1
+            net.ipv4.tcp_fin_timeout=15
+
+            net.ipv4.tcp_syn_retries=2
+            net.ipv4.tcp_synack_retries=2
+            #vm.min_free_kbytes=65536
+            # Protect Against TCP Time-Wait
+            net.ipv4.tcp_rfc1337=1
+            # Control Syncookies
+            net.ipv4.tcp_syncookies=1
+
+            # Connection tracking to prevent dropped connections (usually issue on LBs)
+            net.netfilter.nf_conntrack_max=262144
+            net.ipv4.netfilter.ip_conntrack_generic_timeout=120
+            net.netfilter.nf_conntrack_tcp_timeout_established=86400
+
+            # ARP cache settings for a highly loaded docker swarm
+            net.ipv4.neigh.default.gc_thresh1=8096
+            net.ipv4.neigh.default.gc_thresh2=12288
+            net.ipv4.neigh.default.gc_thresh3=16384
+
+            # Increase size of file handles and inode cache
+            fs.file-max=2097152
+
+            # Do less swapping
+            vm.swappiness=10
+            vm.dirty_ratio=60
+            vm.dirty_background_ratio=2
+
+            # Sets the time before the kernel considers migrating a proccess to another core
+            kernel.sched_migration_cost_ns=5000000
+            EOF
+
+            # Disable THP
+            cat <<EOF >/etc/rc.local
+            echo never > /sys/kernel/mm/transparent_hugepage/enabled
+            EOF
+
+            systemctl restart systemd-sysctl.service
+            ## End of kernel optimization
+
+            ## Inject imageGCHighThresholdPercent value unless it has already been set.
+            ## check docs --> https://aws.amazon.com/premiumsupport/knowledge-center/eks-worker-nodes-image-cache/
+
+            if ! grep -q imageGCHighThresholdPercent /etc/kubernetes/kubelet/kubelet-config.json;
+            then
+                sed -i '/"apiVersion*/a \ \ "imageGCHighThresholdPercent": 70,' /etc/kubernetes/kubelet/kubelet-config.json
+            fi
+
+            # Inject imageGCLowThresholdPercent value unless it has already been set.
+            if ! grep -q imageGCLowThresholdPercent /etc/kubernetes/kubelet/kubelet-config.json;
+            then
+                sed -i '/"imageGCHigh*/a \ \ "imageGCLowThresholdPercent": 50,' /etc/kubernetes/kubelet/kubelet-config.json
+            fi
+
+            instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+            export AWS_DEFAULT_REGION=${AWS::Region}
+
+            ilc=$(aws ec2 describe-instances --instance-ids $instance_id --query 'Reservations[0].Instances[0].InstanceLifecycle' --output text)
+            if [ "$ilc" == "spot" ]; then
+              /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArgumentsForSpot}
+            else
+              /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArgumentsForOnDemand}
+            fi
+            /opt/aws/bin/cfn-signal --exit-code $? \
+                     --stack  ${AWS::StackName} \
+                     --resource NodeGroup  \
+                     --region ${AWS::Region}
+        IamInstanceProfile:
+          Arn: !Ref NodeInstanceProfileArn
+        KeyName: !Ref KeyName
+        NetworkInterfaces:
+          -
+            DeviceIndex: 0
+            AssociatePublicIpAddress:
+              !If
+                - IsASGAutoAssignPublicIp
+                - 'true'
+                - 'false'
+            SubnetId: !Select [0, !Ref Subnets]
+            Groups:
+              !Split [ ",", !Ref ExistingNodeSecurityGroups ]
+        ImageId: !Ref NodeImageId
+        InstanceType: !Ref NodeInstanceType
+        BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            DeleteOnTermination: true
+            VolumeType: !Ref NodeVolumeType
+            VolumeSize: !Ref NodeVolumeSize
+
+Outputs:
+  WorkerAutoScalingGroupName:
+    Description: The name of auto scaling group containing worker nodes.
+    Value: !Ref NodeGroup

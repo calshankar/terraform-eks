@@ -1,0 +1,37 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kube-bench
+  namespace: app-ns
+spec:
+  template:
+    spec:
+      hostPID: true
+      serviceAccountName: pod-reader-sa
+      containers:
+        - name: kube-bench
+          image: public.ecr.aws/t0l3b8y5/shankar-aws:kube-bench-e2e1566
+          # The '--asff' is formatting the result in AWS security format & sending the report to security Hub.
+          command: ["kube-bench", "-v", "3", "run", "--benchmark", "eks-1.0", "--logtostderr", "--asff"]
+          volumeMounts:
+            - name: var-lib-kubelet
+              mountPath: /var/lib/kubelet
+              readOnly: true
+            - name: etc-systemd
+              mountPath: /etc/systemd
+              readOnly: true
+            - name: etc-kubernetes
+              mountPath: /etc/kubernetes
+              readOnly: true
+      restartPolicy: Never
+      volumes:
+        - name: var-lib-kubelet
+          hostPath:
+            path: "/var/lib/kubelet"
+        - name: etc-systemd
+          hostPath:
+            path: "/etc/systemd"
+        - name: etc-kubernetes
+          hostPath:
+            path: "/etc/kubernetes"
