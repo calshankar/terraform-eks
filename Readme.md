@@ -15,7 +15,7 @@ Curretly it launches only spot to save cost. You can go head & modify the `varia
 - Managed node group is created via TF module & unamanged spot node group via aws provided CF teamplate via resource block
 - Unmanaged spot Node group ASG+LT can be a playground for SRE team to experiment with ami/asg/LT configuration before prod rollout, assuming no critical workloads are scheduled. Always use a standby EKS environment for experiments
 - The terraform version `version.tf` is `>=1.0.0`. Ideally any version `>=0.15` should work. Please report any issue
-- The module uses env variable for role
+- The module uses env variable for to pass the iam role to setup the cluster
 - Supports `kube-bench` integration via service account `pod-reader` which is automatically created. Follow the instructions in additional resource link to set your cluster for `audit`
 
 Note: `The terraform apply can ***abruptly exit*** while installing EKS-addons. **This is a known issue**. Re-run terraform apply again`
