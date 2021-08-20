@@ -6,7 +6,7 @@ EKS setup implementation  using combination of `Terraform` and `Cloudformation` 
 
 Curretly it launches only spot to save cost. You can go head & modify the `variable.tf`, `eks-node-group` config to launch on-demand instances.
 
-## Important Notice, Suggestion & Assumption
+## Important Assumption & Suggestion
 
 - This doc assumes a working aws-cli setup with suffcient AWS IAM permission to create AWS resource in the module. Please use [aws-vault](https://github.com/99designs/aws-vault) to setup aws credentials securely
 - Assumes working kubectl cli matching the version of EKS cluster &  `helm3` local setip for installing cluster addons. `local-null-provisioner` module will fail without it
@@ -26,7 +26,7 @@ Note: `The terraform apply can ***abruptly exit*** while installing EKS-addons. 
 - Initializes custom launch template for `EKS Managed node group` and Unmanaged spot node group
 - Nodes in both Managed/Unmanaged spot node group joins the cluster automatically via user-data setup.
 - Modifies the auth configmap to include the iam role used by Unamanged nodegroup
-- Install cluster addons listed below
+- Install cluster addons listed below along with control plan logging enabled
 - Cillium is the preferred network plugin over VPC CNI plugin(Disabled by default)
 - Automatically Configures cluster & bastion host access from your public IP instead of opening cluster endpoint to WWW. `Ideally, cluster endpoint should be private & accessible via VPN`.
 - kubelet garbage collection to clean up the image cache in the worker node when the disk usage reaches 70%
