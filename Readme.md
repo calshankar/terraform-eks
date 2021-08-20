@@ -31,14 +31,18 @@ Note: `The terraform apply can ***abruptly exit*** while installing EKS-addons. 
 - Automatically Configures cluster & bastion host access from your public IP instead of opening cluster endpoint to WWW. `Ideally, cluster endpoint should be private & accessible via VPN`.
 - kubelet garbage collection to clean up the image cache in the worker node when the disk usage reaches 70%
 - irsa for pods (`pod_reader`) to assume role with permission to SSM, ECR, S3 & iam assume role
+- Repo is integrated with [bridge cloud](https://bridgecrew.io/blog/infrastructure-security-at-scale-with-bridgecrew-for-terraform-cloud/) for infrastruce security scanning & vulnerability scanning against CIS benmarks. Generates detailed categorized error report.
 
 `Note: Please avoid modifying the launch template of Managed Node group once it is created. EKS behind the scenes create a clone of the referenced launch template and binds it to the EKS nodegroup`
+
+![](pics/bridgeCrew.png)
 
 ## Upcoming feature (WIP...)
 
 - kyverno integration instead of PSP
 - Cross-plane intergration
 - Custom Addons (more on this later..)
+- [Terragoat integration](https://bridgecrew.io/blog/terragoat-open-source-infrastructure-code-security-training-project-terraform/)
 - [Bottle-rocket ami support](https://aws.amazon.com/blogs/opensource/getting-started-with-bottlerocket-on-aws-graviton2/)
 - containerd as default-runtime instead of docker in EKS-1.21. Use the flag `--container-runtime containerd` during kubelet initialization (supported in EKS-1.21 release ami)
 
