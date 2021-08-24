@@ -1,1 +1,0 @@
-aws_role_arn = "arn:aws:iam::235271803381:role/adminAccess"

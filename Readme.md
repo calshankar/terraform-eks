@@ -81,6 +81,7 @@ Following are the componets that are installed by `default`:
 * CoreDns
 * Dashboard
 * Kube Proxy
+* [Predictive Horizontal Pod Autoscaler](https://predictive-horizontal-pod-autoscaler.readthedocs.io/en/latest/user-guide/getting-started/)
 
 Addons(WIP..):
 

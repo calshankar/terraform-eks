@@ -144,6 +144,17 @@ resource "null_resource" "cluster-component" {
     ## Add metric server..
     kubectl create -f ./eks_manifest/metrics-server/components.yaml
 
+    sleep 5
+
+    ## Add Predictive HPA -> https://predictive-horizontal-pod-autoscaler.readthedocs.io/en/latest/user-guide/getting-started/
+
+    # VERSION=v1.0.3
+    # HELM_CHART=custom-pod-autoscaler-operator
+    helm install custom-pod-autoscaler-operator https://github.com/jthomperoo/custom-pod-autoscaler-operator/releases/download/v1.0.3/custom-pod-autoscaler-operator-v1.0.3.tgz
+
+    sleep 5
+    kubectl create -f ./eks_manifest/hpa/
+
     EOT
   }
   depends_on = [

@@ -6,10 +6,10 @@ terraform {
 
   backend "remote" {
     hostname     = "app.terraform.io"
-    organization = "<TF cloud organization"
+    organization = "235271803381-tf"
 
     workspaces {
-      name = "<TF-cloud-workspace-name>"
+      name = "eks-prod"
     }
   }
   required_providers {
