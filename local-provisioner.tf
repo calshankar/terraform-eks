@@ -152,6 +152,8 @@ resource "null_resource" "cluster-component" {
     # HELM_CHART=custom-pod-autoscaler-operator
     helm install custom-pod-autoscaler-operator https://github.com/jthomperoo/custom-pod-autoscaler-operator/releases/download/v1.0.3/custom-pod-autoscaler-operator-v1.0.3.tgz
 
+    kubectl create -f ./eks_manifest/hpa/linear-model.yaml
+
     EOT
   }
   depends_on = [

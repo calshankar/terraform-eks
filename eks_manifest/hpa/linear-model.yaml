@@ -18,7 +18,7 @@ spec:
     - name: minReplicas
       value: "1"
     - name: maxReplicas
-      value: "10"
+      value: "3"
     - name: predictiveConfig
       value: |
         models:
@@ -27,7 +27,7 @@ spec:
           perInterval: 1
           linear:
             lookAhead: 10000
-            storedValues: 6
+            storedValues: 20
         decisionType: "maximum"
         metrics:
         - type: Resource

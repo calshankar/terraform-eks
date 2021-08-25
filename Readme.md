@@ -33,6 +33,7 @@ Note: `The terraform apply can ***abruptly exit*** while installing EKS-addons. 
 - kubelet garbage collection to clean up the image cache in the worker node when the disk usage reaches 70%
 - irsa for pods (`pod_reader`) to assume role with permission to SSM, ECR, S3 & iam assume role
 - Repo is integrated with [bridge cloud](https://bridgecrew.io/blog/infrastructure-security-at-scale-with-bridgecrew-for-terraform-cloud/) for infrastruce security scanning & vulnerability scanning against CIS benmarks. Generates detailed categorized error report and Infrastructure as Code analysis
+- Predictive Horizontal Pod Autoscaler which preditcs replica count ahead of time. Pls check addons section
 
 `Note: EKS Managed Node Grp, behind the scenes creates a clone of the custom launch template and binds it to the EKS nodegroup. Please note that incrementing the version of the launch template will cause graceful node rollout to the new version. Depends on how soon the running pod can be evicted`
 
