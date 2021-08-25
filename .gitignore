@@ -28,4 +28,4 @@ override.tf.json
 .terraformrc
 terraform.rc
 version.tf
-eks_template/private
+eks_template/private/*
