@@ -137,7 +137,7 @@ variable "max_number_worker_nodes" {
 
 variable "aws_role_arn" {
   type        = string
-  description = "Role for cluster creation. Read of environment variable TF_VAR_AWS_ROLE_ARN"
+  description = "Role for cluster creation. Read from .tfvar file or environment variable TF_VAR_AWS_ROLE_ARN"
 }
 
 variable "oidc_thumbprint_list" {
