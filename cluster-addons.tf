@@ -28,4 +28,7 @@ resource "aws_eks_addon" "core_dns" {
       "eks_addon" = "coredns"
     }
   )
+  depends_on = [
+    module.eks-node-group-spotB
+  ]
 }

@@ -19,7 +19,7 @@ variable "single_zone" {
 variable "bastion_instance_types" {
   type        = list(string)
   description = "Bastion instance types used for spot instances."
-  default     = ["t3.nano", "t3.micro"]
+  default     = ["t2.nano", "t3a.micro"]
 }
 
 variable "worker_instance_types" {
@@ -111,7 +111,7 @@ variable "ondemand_number_of_nodes" {
 variable "ondemand_min_number_of_nodes" {
   type        = number
   description = "On-demand minimum size nodes for Managed Node Group"
-  default     = 0
+  default     = 1
 }
 
 variable "ondemand_percentage_above_base" {
@@ -137,7 +137,7 @@ variable "max_number_worker_nodes" {
 
 variable "aws_role_arn" {
   type        = string
-  description = "Role for cluster creation. Read of environment variable TF_VAR_AWS_ROLE_ARN"
+  description = "Role for cluster creation. Read from .tfvar file or environment variable TF_VAR_AWS_ROLE_ARN"
 }
 
 variable "oidc_thumbprint_list" {
