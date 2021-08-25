@@ -36,7 +36,11 @@ Note: `The terraform apply can ***abruptly exit*** while installing EKS-addons. 
 
 `Note: EKS Managed Node Grp, behind the scenes creates a clone of the custom launch template and binds it to the EKS nodegroup. Please note that incrementing the version of the launch template will cause graceful node rollout to the new version. Depends on how soon the running pod can be evicted`
 
+**IAC checks**
 ![](pics/code-analysis.png)
+
+**Pull request Warnings:**
+![](pics/ci-scan.png)
 
 ![](pics/bridgeCrew.png)
 
