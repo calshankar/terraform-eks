@@ -271,7 +271,11 @@ Resources:
             #   systemctl enable --now iptables
             # fi
 
+            wget https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm || true
+            sudo yum -y localinstall amazon-ssm-agent.rpm || true
+            sudo systemctl enable amazon-ssm-agent || true
             sudo systemctl start amazon-ssm-agent || true
+            rm -f amazon-ssm-agent.rpm || true
 
             # Sysctl Kernel optimization changes
             ## Disable IPv6
@@ -364,7 +368,9 @@ Resources:
             echo never > /sys/kernel/mm/transparent_hugepage/enabled
             EOF
 
-            systemctl restart systemd-sysctl.service
+            sudo sysctl --system
+            sudo sysctl -p
+            sudo systemctl daemon-reload
             ## End of kernel optimization
 
             ## Inject imageGCHighThresholdPercent value unless it has already been set.
@@ -381,14 +387,21 @@ Resources:
                 sed -i '/"imageGCHigh*/a \ \ "imageGCLowThresholdPercent": 50,' /etc/kubernetes/kubelet/kubelet-config.json
             fi
 
-            instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
             export AWS_DEFAULT_REGION=${AWS::Region}
+            instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 
-            ilc=$(aws ec2 describe-instances --instance-ids $instance_id --query 'Reservations[0].Instances[0].InstanceLifecycle' --output text)
-            if [ "$ilc" == "spot" ]; then
+            instance_type=$(curl --silent http://169.254.169.254/latest/meta-data/instance-life-cycle)
+
+            shopt -s nocasematch
+
+            if [[ "spot" =~ "$instance_type" ]]; then
+
               /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArgumentsForSpot}
+
             else
+
               /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArgumentsForOnDemand}
+
             fi
             /opt/aws/bin/cfn-signal --exit-code $? \
                      --stack  ${AWS::StackName} \
@@ -411,7 +424,7 @@ Resources:
         ImageId: !Ref NodeImageId
         InstanceType: !Ref NodeInstanceType
         BlockDeviceMappings:
-        - DeviceName: "/dev/sda1"
+        - DeviceName: "/dev/xvda"
           Ebs:
             DeleteOnTermination: true
             VolumeType: !Ref NodeVolumeType

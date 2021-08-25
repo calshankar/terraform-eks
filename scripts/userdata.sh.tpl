@@ -9,7 +9,11 @@ set -ex
 
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
+wget https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm || true
+sudo yum -y localinstall amazon-ssm-agent.rpm || true
+sudo systemctl enable amazon-ssm-agent || true
 sudo systemctl start amazon-ssm-agent || true
+rm -f amazon-ssm-agent.rpm || true
 
 # Sysctl Kernel optimization changes
 ## Disable IPv6
@@ -102,7 +106,9 @@ cat <<EOF >/etc/rc.local
 echo never > /sys/kernel/mm/transparent_hugepage/enabled
 EOF
 
-systemctl restart systemd-sysctl.service
+sudo sysctl --system
+sudo sysctl -p
+sudo systemctl daemon-reload
 ## End of kernel optimization
 
 ## Inject imageGCHighThresholdPercent value unless it has already been set.
@@ -122,11 +128,13 @@ fi
 ## Initializing kubelet based on spot/ondemand
 instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 
-instance_type=$(aws ec2 describe-instances --instance-ids $instance_id --query 'Reservations[0].Instances[0].InstanceLifecycle' --output text)
-
 export AWS_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
 
-if [ "$instance_type" == "spot" ]; then
+instance_type=$(curl --silent http://169.254.169.254/latest/meta-data/instance-life-cycle)
+
+shopt -s nocasematch
+
+if [[ "spot" =~ "$instance_type" ]]; then
 
   /etc/eks/bootstrap.sh '${CLUSTER_NAME}' --b64-cluster-ca '${B64_CLUSTER_CA}' --apiserver-endpoint '${API_SERVER_URL}' --kubelet-extra-arg "--system-reserved cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi --kube-reserved cpu=250m,memory=1Gi,ephemeral-storage=1Gi --eviction-hard memory.available<0.2Gi,nodefs.available<10% --allowed-unsafe-sysctls net.core.somaxconn,net.ipv4.tcp_tw_reuse --event-qps=0 --read-only-port=0"
 
