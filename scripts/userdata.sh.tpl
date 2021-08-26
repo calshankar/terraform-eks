@@ -136,11 +136,17 @@ shopt -s nocasematch
 
 if [[ "spot" =~ "$instance_type" ]]; then
 
-  /etc/eks/bootstrap.sh '${CLUSTER_NAME}' --b64-cluster-ca '${B64_CLUSTER_CA}' --apiserver-endpoint '${API_SERVER_URL}' --kubelet-extra-arg "--system-reserved cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi --kube-reserved cpu=250m,memory=1Gi,ephemeral-storage=1Gi --eviction-hard memory.available<0.2Gi,nodefs.available<10% --allowed-unsafe-sysctls net.core.somaxconn,net.ipv4.tcp_tw_reuse --event-qps=0 --read-only-port=0"
+  echo "**** Innitializing bootstrap configuration for ${instance_type} ****"
+  echo ""
+
+  /etc/eks/bootstrap.sh '${CLUSTER_NAME}' --b64-cluster-ca '${B64_CLUSTER_CA}' --apiserver-endpoint '${API_SERVER_URL}' --kubelet-extra-args "--system-reserved cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi --kube-reserved cpu=250m,memory=1Gi,ephemeral-storage=1Gi --eviction-hard memory.available<0.2Gi,nodefs.available<10% --allowed-unsafe-sysctls net.core.somaxconn,net.ipv4.tcp_tw_reuse --event-qps=0 --read-only-port=0"
 
 else
 
-  /etc/eks/bootstrap.sh '${CLUSTER_NAME}' --b64-cluster-ca '${B64_CLUSTER_CA}' --apiserver-endpoint '${API_SERVER_URL}' --kubelet-extra-arg "--system-reserved cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi --kube-reserved cpu=250m,memory=1Gi,ephemeral-storage=1Gi --eviction-hard memory.available<0.2Gi,nodefs.available<10% --allowed-unsafe-sysctls net.core.somaxconn,net.ipv4.tcp_tw_reuse --event-qps=0 --read-only-port=0"
+  echo "**** Innitializing bootstrap configuration for ${instance_type} ****"
+  echo ""
+
+  /etc/eks/bootstrap.sh '${CLUSTER_NAME}' --b64-cluster-ca '${B64_CLUSTER_CA}' --apiserver-endpoint '${API_SERVER_URL}' --kubelet-extra-args "--system-reserved cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi --kube-reserved cpu=250m,memory=1Gi,ephemeral-storage=1Gi --eviction-hard memory.available<0.2Gi,nodefs.available<10% --allowed-unsafe-sysctls net.core.somaxconn,net.ipv4.tcp_tw_reuse --event-qps=0 --read-only-port=0"
 
 fi
 

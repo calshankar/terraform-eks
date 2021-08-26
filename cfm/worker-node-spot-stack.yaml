@@ -396,9 +396,15 @@ Resources:
 
             if [[ "spot" =~ "$instance_type" ]]; then
 
+              echo "**** Innitializing bootstrap configuration for ${instance_type} ****"
+              echo ""
+
               /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArgumentsForSpot}
 
             else
+
+              echo "**** Innitializing bootstrap configuration for ${instance_type} ****"
+              echo ""
 
               /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArgumentsForOnDemand}
 
