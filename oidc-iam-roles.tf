@@ -10,13 +10,13 @@ resource "aws_iam_role" "load_balancer_controller" {
 
   name = "${local.name_prefix}-load-balancer-controller"
 
-  assume_role_policy = templatefile("policies/oidc_assume_role_policy.json", { OIDC_ARN = aws_iam_openid_connect_provider.cluster[0].arn, OIDC_URL = replace(aws_iam_openid_connect_provider.cluster[0].url, "https://", ""), NAMESPACE = "kube-system", SA_NAME = "aws-load-balancer-controller" })
+  assume_role_policy = templatefile("policies/oidc_assume_role_policy.json", { OIDC_ARN = aws_iam_openid_connect_provider.cluster[0].arn, OIDC_URL = replace(aws_iam_openid_connect_provider.cluster[0].url, "https://", ""), NAMESPACE = var.admin_namespace, SA_NAME = "aws-load-balancer-controller" })
 
   tags = merge(
     var.tags,
     {
       "ServiceAccountName"      = "aws-load-balancer-controller"
-      "ServiceAccountNameSpace" = "kube-system"
+      "ServiceAccountNameSpace" = var.admin_namespace
     }
   )
 
@@ -74,7 +74,7 @@ resource "aws_iam_role" "external_secrets" {
     var.tags,
     {
       "ServiceAccountName"      = "external-secrets"
-      "ServiceAccountNameSpace" = "default"
+      "ServiceAccountNameSpace" = "kube-system"
     }
   )
 
@@ -97,13 +97,13 @@ resource "aws_iam_role" "external_dns" {
 
   name = "${local.name_prefix}-external-dns"
 
-  assume_role_policy = templatefile("policies/oidc_assume_role_policy.json", { OIDC_ARN = aws_iam_openid_connect_provider.cluster[0].arn, OIDC_URL = replace(aws_iam_openid_connect_provider.cluster[0].url, "https://", ""), NAMESPACE = "kube-system", SA_NAME = "external-dns" })
+  assume_role_policy = templatefile("policies/oidc_assume_role_policy.json", { OIDC_ARN = aws_iam_openid_connect_provider.cluster[0].arn, OIDC_URL = replace(aws_iam_openid_connect_provider.cluster[0].url, "https://", ""), NAMESPACE = var.admin_namespace, SA_NAME = "external-dns" })
 
   tags = merge(
     var.tags,
     {
       "ServiceAccountName"      = "external-dns"
-      "ServiceAccountNameSpace" = "kube-system"
+      "ServiceAccountNameSpace" = var.admin_namespace
     }
   )
 
@@ -156,13 +156,13 @@ resource "aws_iam_role" "cloudwatch_agent" {
 
   name = "${local.name_prefix}-cloudwatch-agent"
 
-  assume_role_policy = templatefile("policies/oidc_assume_role_policy.json", { OIDC_ARN = aws_iam_openid_connect_provider.cluster[0].arn, OIDC_URL = replace(aws_iam_openid_connect_provider.cluster[0].url, "https://", ""), NAMESPACE = "amazon-cloudwatch", SA_NAME = "cloudwatch-agent" })
+  assume_role_policy = templatefile("policies/oidc_assume_role_policy.json", { OIDC_ARN = aws_iam_openid_connect_provider.cluster[0].arn, OIDC_URL = replace(aws_iam_openid_connect_provider.cluster[0].url, "https://", ""), NAMESPACE = var.admin_namespace, SA_NAME = "cloudwatch-agent" })
 
   tags = merge(
     var.tags,
     {
       "ServiceAccountName"      = "cloudwatch-agent"
-      "ServiceAccountNameSpace" = "amazon-cloudwatch"
+      "ServiceAccountNameSpace" = var.admin_namespace
     }
   )
 

@@ -6,19 +6,25 @@ EKS setup implementation  using combination of `Terraform` and `Cloudformation` 
 
 Curretly it launches only spot to save cost. You can go head & modify the `variable.tf`, `eks-node-group` config to launch on-demand instances.
 
-## Important Assumption & Suggestion
+## Important Assumption
 
 - This doc assumes a working aws-cli setup with suffcient AWS IAM permission to create AWS resource in the module. Please use [aws-vault](https://github.com/99designs/aws-vault) to setup aws credentials securely
 - Assumes working kubectl cli matching the version of EKS cluster &  `helm3` local setip for installing cluster addons. `local-null-provisioner` module will fail without it
 - The cluster identity is `attached` to the role/user creating the tf resource. This is automatically done for the user & role declared in variables.tf
 - RBAC permission must be setup to ensure other user/group h'v permission towards the cluster. More details [here](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html)
 - Managed node group is created via TF module & unamanged spot node group via aws provided CF teamplate via resource block
-- Unmanaged spot Node group ASG+LT can be a playground for SRE team to experiment with ami/asg/LT configuration before prod rollout, assuming no critical workloads are scheduled. Always use a standby EKS environment for experiments
+- Local provisioner setups extra utilities in the cluster. Make sure the default `values.yaml` are modified or use your own custom kubernetes manifest before enabling the `create_eks_utilities` variable.
+
+
+Note: `The terraform apply can ***abruptly exit*** while installing EKS-addons. **This is a known issue**. Re-run terraform apply again`
+
+## Tips & Suggestion
+
 - The terraform version `version.tf` is `>=1.0.0`. Ideally any version `>=0.15` should work. Please report any issue
 - The module uses env variable for to pass the iam role to setup the cluster
 - Supports `kube-bench` integration via service account `pod-reader` which is automatically created. Follow the instructions in additional resource link to set your cluster for `audit`
-
-Note: `The terraform apply can ***abruptly exit*** while installing EKS-addons. **This is a known issue**. Re-run terraform apply again`
+- The Unmanaged spot node group are tainted with `spotInstance=true:PreferNoSchedule`. Incoming pods must h'v toleration for the taint set
+- Unmanaged spot Node group ASG+LT can be a playground for SRE team to experiment with ami/asg/LT configuration before prod rollout, assuming no critical workloads are scheduled. Always use a standby EKS environment for experiments
 
 ## Features
 

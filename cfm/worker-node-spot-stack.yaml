@@ -373,7 +373,28 @@ Resources:
             sudo systemctl daemon-reload
             ## End of kernel optimization
 
-            ## Inject imageGCHighThresholdPercent value unless it has already been set.
+            export AWS_DEFAULT_REGION=${AWS::Region}
+            instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+
+            inst_type=$(curl --silent http://169.254.169.254/latest/meta-data/instance-life-cycle)
+
+            shopt -s nocasematch
+
+            if [[ "spot" =~ "$inst_type" ]]; then
+
+              echo "#### Innitializing bootstrap configuration for "$inst_type"  ####"
+
+              /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArgumentsForSpot}
+
+            else
+
+              echo "#### Innitializing bootstrap configuration for "$inst_type" ####"
+
+              /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArgumentsForOnDemand}
+
+            fi
+
+             ## Inject imageGCHighThresholdPercent value unless it has already been set.
             ## check docs --> https://aws.amazon.com/premiumsupport/knowledge-center/eks-worker-nodes-image-cache/
 
             if ! grep -q imageGCHighThresholdPercent /etc/kubernetes/kubelet/kubelet-config.json;
@@ -387,28 +408,8 @@ Resources:
                 sed -i '/"imageGCHigh*/a \ \ "imageGCLowThresholdPercent": 50,' /etc/kubernetes/kubelet/kubelet-config.json
             fi
 
-            export AWS_DEFAULT_REGION=${AWS::Region}
-            instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+            sudo service kubelet stop;sudo service kubelet start
 
-            instance_type=$(curl --silent http://169.254.169.254/latest/meta-data/instance-life-cycle)
-
-            shopt -s nocasematch
-
-            if [[ "spot" =~ "$instance_type" ]]; then
-
-              echo "**** Innitializing bootstrap configuration for ${instance_type} ****"
-              echo ""
-
-              /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArgumentsForSpot}
-
-            else
-
-              echo "**** Innitializing bootstrap configuration for ${instance_type} ****"
-              echo ""
-
-              /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArgumentsForOnDemand}
-
-            fi
             /opt/aws/bin/cfn-signal --exit-code $? \
                      --stack  ${AWS::StackName} \
                      --resource NodeGroup  \

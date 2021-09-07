@@ -54,13 +54,12 @@ module "vpc" {
 }
 
 #####
-# VPC endpoints
+# VPC endpoints values = ["*us-east-1.s3*"]
 #####
 data "aws_vpc_endpoint_service" "s3" {
   service_type = "Interface"
   filter {
     name   = "service-name"
-    values = ["*s3*"]
   }
 }
 
@@ -138,6 +137,59 @@ resource "aws_security_group_rule" "vpc_endpoint_self_ingress" {
   from_port                = 0
   to_port                  = 0
   source_security_group_id = aws_security_group.vpc_endpoint.id
+}
+
+#####
+# Security Group configuration for Public LB
+#####
+
+resource "random_id" "lb_sg_suffix" {
+  byte_length = 4
+}
+
+resource "aws_security_group" "lb_sg" {
+  name        = "${local.name_prefix}-lb-sg-${random_id.lb_sg_suffix.hex}"
+  description = "Security Group used by Public LB"
+  vpc_id      = module.vpc.vpc_id
+
+  tags = merge(
+    var.tags,
+    {
+      "Name" = "${local.name_prefix}-lb-sg-${random_id.lb_sg_suffix.hex}"
+    }
+  )
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group_rule" "lb_egress" {
+  security_group_id = aws_security_group.lb_sg.id
+  type              = "egress"
+  protocol          = "-1"
+  from_port         = 0
+  to_port           = 0
+  cidr_blocks       = ["0.0.0.0/0"]
+  ipv6_cidr_blocks  = ["::/0"]
+}
+
+resource "aws_security_group_rule" "lb_http_ingress" {
+  security_group_id = aws_security_group.lb_sg.id
+  type              = "ingress"
+  protocol          = "tcp"
+  from_port         = 80
+  to_port           = 80
+  cidr_blocks       = ["${chomp(data.http.myip.body)}/32"]
+}
+
+resource "aws_security_group_rule" "lb_https_ingress" {
+  security_group_id = aws_security_group.lb_sg.id
+  type              = "ingress"
+  protocol          = "tcp"
+  from_port         = 443
+  to_port           = 443
+  cidr_blocks       = ["${chomp(data.http.myip.body)}/32"]
 }
 
 #####

@@ -44,7 +44,8 @@ resource "null_resource" "auth-setup" {
   }
   depends_on = [
     null_resource.setup-kubeconfig,
-    aws_cloudformation_stack.spot_worker
+    aws_cloudformation_stack.spot_worker,
+    aws_eks_addon.core_dns
   ]
 }
 
@@ -60,12 +61,16 @@ resource "null_resource" "console-access" {
   depends_on = [
     null_resource.setup-kubeconfig,
     null_resource.cillium-setup,
-    aws_cloudformation_stack.spot_worker
+    aws_cloudformation_stack.spot_worker,
+    aws_eks_addon.core_dns
   ]
 }
 
 ## sets up ebs csi driver
 resource "null_resource" "ebs-csi-driver" {
+
+  count = var.create_eks_utilities ? 1 : 0
+
   provisioner "local-exec" {
     command = <<EOT
     ## GP3+standard storage class
@@ -96,6 +101,7 @@ resource "null_resource" "ebs-csi-driver" {
   depends_on = [
     null_resource.setup-kubeconfig,
     null_resource.cillium-setup,
+    aws_eks_addon.core_dns,
     null_resource.console-access
   ]
 }
@@ -107,6 +113,8 @@ resource "null_resource" "pod-reader-sa" {
 
     kubectl create ns ${var.custom_pod_namespace}
 
+    kubectl create ns ${var.admin_namespace}
+
     kubectl create sa ${var.pod_sa_name} -n ${var.custom_pod_namespace}
 
     kubectl annotate serviceaccount ${var.pod_sa_name} \
@@ -117,7 +125,7 @@ resource "null_resource" "pod-reader-sa" {
   }
   depends_on = [
     null_resource.setup-kubeconfig,
-    null_resource.ebs-csi-driver,
+    aws_eks_addon.core_dns,
     null_resource.cillium-setup
   ]
 }
@@ -152,20 +160,22 @@ resource "null_resource" "cluster-component" {
     # HELM_CHART=custom-pod-autoscaler-operator
     helm install custom-pod-autoscaler-operator https://github.com/jthomperoo/custom-pod-autoscaler-operator/releases/download/v1.0.3/custom-pod-autoscaler-operator-v1.0.3.tgz
 
-    kubectl create -f ./eks_manifest/hpa/linear-model.yaml
-
     EOT
   }
   depends_on = [
     null_resource.setup-kubeconfig,
     null_resource.pod-reader-sa,
+    aws_eks_addon.core_dns,
     null_resource.cillium-setup
   ]
 }
 
-## other useful utility
+## other useful/extra cluster utilites
 
 resource "null_resource" "useful-utility" {
+
+  count = var.create_eks_utilities ? 1 : 0
+
   provisioner "local-exec" {
     command = <<EOT
 
@@ -176,23 +186,23 @@ resource "null_resource" "useful-utility" {
     helm repo add stakater https://stakater.github.io/stakater-charts
     ## Eks charts repo
     helm repo add eks https://aws.github.io/eks-charts
-    ## Add EBS cs-driver
+    ## Add EBS csi-driver
     helm repo add secrets-store-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/secrets-store-csi-driver/master/charts
     helm repo update
 
     # Applying it for single namespace. Check chart values for config
-    helm install stakater/reloader --set reloader.watchGlobally=false --namespace ${var.custom_pod_namespace} --generate-name
+    helm install stakater/reloader --set reloader.watchGlobally=false --namespace ${var.admin_namespace} --generate-name
 
     ## Installing external. Requires service account with R53 iam permission
-    ## Add this annotatin to ingress --> "external-dns.alpha.kubernetes.io/hostname: www.mydomain.com"
+    ## Add this annotation to ingress --> "external-dns.alpha.kubernetes.io/hostname: www.mydomain.com"
 
-    helm install my-release bitnami/external-dns
-    kubectl create sa external-dns -n kube-system
-    kubectl annotate serviceaccount external-dns -n kube-system \
-    eks.amazonaws.com/role-arn=iam_role_arn_external_dns.value --overwrite
+    helm install external-dns -f ./eks_manifest/private/external_dns/values.yaml bitnami/external-dns --namespace ${var.admin_namespace}
+
+    ##kubectl annotate serviceaccount external-dns --namespace ${var.admin_namespace} eks.amazonaws.com/role-arn=iam_role_arn_external_dns.value --overwrite
 
     ## Install CSI secrets store
     helm install -n kube-system csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver
+
     # AWS Provider for Secrets Manger -> https://github.com/aws/secrets-store-csi-driver-provider-aws
 
     kubectl apply -f https://raw.githubusercontent.com/aws/secrets-store-csi-driver-provider-aws/main/deployment/aws-provider-installer.yaml
@@ -206,11 +216,15 @@ resource "null_resource" "useful-utility" {
     --set nodeSelector.lifecycle=Ec2Spot \
     eks/aws-node-termination-handler
 
+    ## Install AWS load balancer controller
+    helm install aws-loadbalancer-controller --namespace ${var.admin_namespace} --values  ./eks_manifest/private/awslb-controller-values/lb-controller-values.yaml eks/aws-load-balancer-controller
+
     EOT
   }
   depends_on = [
     null_resource.setup-kubeconfig,
     null_resource.cillium-setup,
+    aws_eks_addon.core_dns,
     null_resource.cluster-component
   ]
 }
