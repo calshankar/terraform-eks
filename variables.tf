@@ -89,7 +89,7 @@ variable "hosted_zone_id" {
 }
 
 variable "spot_worker_instance_type" {
-  default = "m5.xlarge"
+  default = "m5.large"
 }
 
 variable "vpc_single_nat_gateway" {
@@ -137,7 +137,7 @@ variable "max_number_worker_nodes" {
 
 variable "aws_role_arn" {
   type        = string
-  description = "Role for cluster creation. Read from .tfvar file or environment variable TF_VAR_AWS_ROLE_ARN"
+  description = "**IMPORTANT** -> Role for cluster creation. Read from .tfvar file or environment variable TF_VAR_AWS_ROLE_ARN"
 }
 
 variable "oidc_thumbprint_list" {
@@ -183,8 +183,26 @@ variable "spot_worker_restrict_metadata_access" {
 
 variable "custom_pod_namespace" {
   type        = string
-  description = "Restrict access to ec2 instance profile credentials"
+  description = "Name space reserved for application pod. The pod-reader SA (iam role for pod) account is mapped to this namespace"
   default     = "app-ns"
+}
+
+variable "admin_namespace" {
+  type        = string
+  description = "Name space reserved for infra admin components. Should not be used for App pods"
+  default     = "sre"
+}
+
+variable "mn_node_label" {
+  type        = string
+  description = "Node-lable to be attached to eks managed node-group via custom launch template.. Must be comma seperated"
+  default     = "sentientblog.io/namespace=sre"
+}
+
+variable "spot_node_label" {
+  type        = string
+  description = "Node-lable to be attached to eks unmanaged/spot node-group via custom launch template.. Must be comma seperated"
+  default     = "sentientblog.io/namespace=app-ns"
 }
 
 variable "pod_sa_name" {
@@ -210,6 +228,14 @@ variable "eks_addon_version_core_dns" {
   type        = string
   description = "Core DNS managed EKS addon version."
   default     = "v1.8.3-eksbuild.1"
+}
+
+## For enabling local provisioner which install other useful/extra cluster utilites like ebs csi driver. pls check local provisioner block. Make sure to modify the **helm values or other path manifest**
+
+variable "create_eks_utilities" {
+  type        = bool
+  description = "Enable extra utilities as part of local provisioner"
+  default     = false
 }
 
 ## To be enabled for 1.21 Upgrade

@@ -111,20 +111,6 @@ sudo sysctl -p
 sudo systemctl daemon-reload
 ## End of kernel optimization
 
-## Inject imageGCHighThresholdPercent value unless it has already been set.
-## check docs --> https://aws.amazon.com/premiumsupport/knowledge-center/eks-worker-nodes-image-cache/
-
-if ! grep -q imageGCHighThresholdPercent /etc/kubernetes/kubelet/kubelet-config.json;
-then
-    sed -i '/"apiVersion*/a \ \ "imageGCHighThresholdPercent": 70,' /etc/kubernetes/kubelet/kubelet-config.json
-fi
-
-# Inject imageGCLowThresholdPercent value unless it has already been set.
-if ! grep -q imageGCLowThresholdPercent /etc/kubernetes/kubelet/kubelet-config.json;
-then
-    sed -i '/"imageGCHigh*/a \ \ "imageGCLowThresholdPercent": 50,' /etc/kubernetes/kubelet/kubelet-config.json
-fi
-
 ## Initializing kubelet based on spot/ondemand
 instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 
@@ -136,12 +122,37 @@ shopt -s nocasematch
 
 if [[ "spot" =~ "$instance_type" ]]; then
 
-  /etc/eks/bootstrap.sh '${CLUSTER_NAME}' --b64-cluster-ca '${B64_CLUSTER_CA}' --apiserver-endpoint '${API_SERVER_URL}' --kubelet-extra-arg "--system-reserved cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi --kube-reserved cpu=250m,memory=1Gi,ephemeral-storage=1Gi --eviction-hard memory.available<0.2Gi,nodefs.available<10% --allowed-unsafe-sysctls net.core.somaxconn,net.ipv4.tcp_tw_reuse --event-qps=0 --read-only-port=0"
+  echo "**** Innitializing bootstrap configuration for $instance_type ****"
+  echo ""
+
+  /etc/eks/bootstrap.sh '${CLUSTER_NAME}' --b64-cluster-ca '${B64_CLUSTER_CA}' --apiserver-endpoint '${API_SERVER_URL}' --kubelet-extra-args "--system-reserved cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi --kube-reserved cpu=250m,memory=1Gi,ephemeral-storage=1Gi --eviction-hard memory.available<0.2Gi,nodefs.available<10% --allowed-unsafe-sysctls net.core.somaxconn,net.ipv4.tcp_tw_reuse --event-qps=0 --read-only-port=0" --node-labels '${NODE_LABEL}'
 
 else
 
-  /etc/eks/bootstrap.sh '${CLUSTER_NAME}' --b64-cluster-ca '${B64_CLUSTER_CA}' --apiserver-endpoint '${API_SERVER_URL}' --kubelet-extra-arg "--system-reserved cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi --kube-reserved cpu=250m,memory=1Gi,ephemeral-storage=1Gi --eviction-hard memory.available<0.2Gi,nodefs.available<10% --allowed-unsafe-sysctls net.core.somaxconn,net.ipv4.tcp_tw_reuse --event-qps=0 --read-only-port=0"
+  echo "**** Innitializing bootstrap configuration for $instance_type ****"
+  echo ""
+
+  /etc/eks/bootstrap.sh '${CLUSTER_NAME}' --b64-cluster-ca '${B64_CLUSTER_CA}' --apiserver-endpoint '${API_SERVER_URL}' --kubelet-extra-args "--system-reserved cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi --kube-reserved cpu=250m,memory=1Gi,ephemeral-storage=1Gi --eviction-hard memory.available<0.2Gi,nodefs.available<10% --allowed-unsafe-sysctls net.core.somaxconn,net.ipv4.tcp_tw_reuse --event-qps=0 --read-only-port=0"
 
 fi
+
+## Inject imageGCHighThresholdPercent value unless it has already been set.
+## check docs --> https://aws.amazon.com/premiumsupport/knowledge-center/eks-worker-nodes-image-cache/
+
+if ! grep -q imageGCHighThresholdPercent /etc/kubernetes/kubelet/kubelet-config.json ; then
+
+  sudo sed -i '/"apiVersion*/a \ \ "imageGCHighThresholdPercent": 70,' /etc/kubernetes/kubelet/kubelet-config.json
+
+fi
+
+# Inject imageGCLowThresholdPercent value unless it has already been set.
+if ! grep -q imageGCLowThresholdPercent /etc/kubernetes/kubelet/kubelet-config.json ; then
+
+  sudo sed -i '/"imageGCHigh*/a \ \ "imageGCLowThresholdPercent": 50,' /etc/kubernetes/kubelet/kubelet-config.json
+
+fi
+
+sudo service kubelet stop;sudo service kubelet start
+
 
 --==MYBOUNDARY==--

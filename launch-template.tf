@@ -21,7 +21,7 @@ resource "aws_launch_template" "worker_template" {
   }
   vpc_security_group_ids = ["${aws_security_group.nonmanaged_workers_sg[0].id}", module.bastion.security_group_id]
 
-  user_data = base64encode(templatefile("./scripts/userdata.sh.tpl", { CLUSTER_NAME = aws_eks_cluster.cluster[0].id, B64_CLUSTER_CA = aws_eks_cluster.cluster[0].certificate_authority[0].data, API_SERVER_URL = aws_eks_cluster.cluster[0].endpoint, RESTRICT_METADATA = var.spot_worker_restrict_metadata_access }))
+  user_data = base64encode(templatefile("./scripts/userdata.sh.tpl", { CLUSTER_NAME = aws_eks_cluster.cluster[0].id, B64_CLUSTER_CA = aws_eks_cluster.cluster[0].certificate_authority[0].data, API_SERVER_URL = aws_eks_cluster.cluster[0].endpoint, RESTRICT_METADATA = var.spot_worker_restrict_metadata_access, NODE_LABEL = var.mn_node_label }))
 
   depends_on = [
     aws_iam_role_policy_attachment.cluster_AmazonEKSClusterPolicy,

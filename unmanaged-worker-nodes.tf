@@ -95,6 +95,18 @@ resource "aws_security_group_rule" "vpc_endpoint_eks_nonmanaged_workers" {
   type                     = "ingress"
 }
 
+resource "aws_security_group_rule" "lb_ingress_eks_workers" {
+  count = var.enable_spot_workers ? 1 : 0
+
+  description              = "Allow LB to communicate to nodes via TG association."
+  from_port                = 31000
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.nonmanaged_workers_sg[0].id
+  source_security_group_id = aws_security_group.lb_sg.id
+  to_port                  = 37000
+  type                     = "ingress"
+}
+
 #####
 # EKS spot worker nodes cloudformation stack
 #####
@@ -132,9 +144,9 @@ resource "aws_cloudformation_stack" "spot_worker" {
     NodeAutoScalingGroupMinSize         = var.min_number_worker_nodes
     NodeAutoScalingGroupMaxSize         = var.max_number_worker_nodes
 
-    BootstrapArgumentsForOnDemand = "--apiserver-endpoint '${aws_eks_cluster.cluster[0].endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster[0].certificate_authority[0].data}' --kubelet-extra-arg '--node-labels=\"lifecycle=OnDemand\" --system-reserved=\"cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi\" --kube-reserved=\"cpu=250m,memory=1Gi,ephemeral-storage=1Gi\" --eviction-hard=\"memory.available<0.2Gi,nodefs.available<10%\" --allowed-unsafe-sysctls=\"net.core.somaxconn,net.ipv4.tcp_tw_reuse\" --event-qps=0 --read-only-port=0'"
+    BootstrapArgumentsForOnDemand = "--apiserver-endpoint '${aws_eks_cluster.cluster[0].endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster[0].certificate_authority[0].data}' --kubelet-extra-args '--node-labels=\"lifecycle=OnDemand,${var.spot_node_label}\" --system-reserved=\"cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi\" --kube-reserved=\"cpu=250m,memory=1Gi,ephemeral-storage=1Gi\" --eviction-hard=\"memory.available<0.2Gi,nodefs.available<10%\" --allowed-unsafe-sysctls=\"net.core.somaxconn,net.ipv4.tcp_tw_reuse\" --event-qps=0 --read-only-port=0'"
 
-    BootstrapArgumentsForSpot = "--apiserver-endpoint '${aws_eks_cluster.cluster[0].endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster[0].certificate_authority[0].data}' --kubelet-extra-arg '--node-labels=\"lifecycle=Ec2Spot\" --register-with-taints=\"spotInstance=true:PreferNoSchedule\" --system-reserved=\"cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi\" --kube-reserved=\"cpu=250m,memory=1Gi,ephemeral-storage=1Gi\" --eviction-hard=\"memory.available<0.2Gi,nodefs.available<10%\" --allowed-unsafe-sysctls=\"net.core.somaxconn,net.ipv4.tcp_tw_reuse\" --event-qps=0 --read-only-port=0'"
+    BootstrapArgumentsForSpot = "--apiserver-endpoint '${aws_eks_cluster.cluster[0].endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster[0].certificate_authority[0].data}' --kubelet-extra-args '--node-labels=\"lifecycle=Ec2Spot,${var.spot_node_label}\" --register-with-taints=\"spotInstance=true:PreferNoSchedule\" --system-reserved=\"cpu=250m,memory=0.2Gi,ephemeral-storage=1Gi\" --kube-reserved=\"cpu=250m,memory=1Gi,ephemeral-storage=1Gi\" --eviction-hard=\"memory.available<0.2Gi,nodefs.available<10%\" --allowed-unsafe-sysctls=\"net.core.somaxconn,net.ipv4.tcp_tw_reuse\" --event-qps=0 --read-only-port=0'"
   }
 
   template_body = file("cfm/worker-node-spot-stack.yaml")
