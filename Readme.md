@@ -15,7 +15,7 @@ Curretly it launches only spot to save cost. You can go head & modify the `varia
 - Managed node group is created via TF module & unamanged spot node group via aws provided CF teamplate via resource block
 - Local provisioner setups extra utilities in the cluster. Make sure the default `values.yaml` are modified or use your own custom kubernetes manifest before enabling the `create_eks_utilities` variable.
 
-Note: `The terraform apply can ***abruptly exit**- [x] while installing EKS-addons. **This is a known issue**. Re-run terraform apply again`
+Note: `The terraform apply can very rarely **abruptly exit** while installing EKS-addons. **This is a known issue**. Re-run terraform apply again`
 
 ## Tips & Suggestion
 
