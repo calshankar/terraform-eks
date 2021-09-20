@@ -15,8 +15,7 @@ Curretly it launches only spot to save cost. You can go head & modify the `varia
 - Managed node group is created via TF module & unamanged spot node group via aws provided CF teamplate via resource block
 - Local provisioner setups extra utilities in the cluster. Make sure the default `values.yaml` are modified or use your own custom kubernetes manifest before enabling the `create_eks_utilities` variable.
 
-
-Note: `The terraform apply can ***abruptly exit*** while installing EKS-addons. **This is a known issue**. Re-run terraform apply again`
+Note: `The terraform apply can very rarely **abruptly exit** while installing EKS-addons. **This is a known issue**. Re-run terraform apply again`
 
 ## Tips & Suggestion
 
@@ -88,24 +87,32 @@ To apply templates simply run `kubectl apply -f .` from a desired folder with re
 
 Following are the componets that are installed by `default`:
 
-* cilium plugin
-* AWS node termination handler
-* CoreDns
-* Dashboard
-* Kube Proxy
-* [Predictive Horizontal Pod Autoscaler](https://predictive-horizontal-pod-autoscaler.readthedocs.io/en/latest/user-guide/getting-started/)
+- [x] cilium plugin
+- [x] AWS node termination handler
+- [x] CoreDns
+- [x] Dashboard
+- [x] Kube Proxy
+- [x] Priority class
+- [x] irsa
+- [x] [Predictive Horizontal Pod Autoscaler](https://predictive-horizontal-pod-autoscaler.readthedocs.io/en/latest/user-guide/getting-started/)
+
+Following addons installation is controlled via tf-variable `create_eks_utilities`. This variable is disabled by default. You **need to enable it to support addon installation** mentioned below.
 
 Addons(WIP..):
 
-* Cluster Autoscaler
-* External-DNS
-* Kube-state-metrics
-* Prometheus operator
-* Secrets EBS CSI Driver
-* Metrics server
-* Reloader
-* Cert Manager
-* Spot Interrupt Handler
+- [x] Cluster Autoscaler
+- [x] External-DNS
+- [x] Node Termination Handler
+- [x] Prometheus operator
+- [x] Secrets EBS CSI Driver
+- [x] Metrics server
+- [x] AWS load balancer controller
+- [x] Reloader
+- [x] Cert Manager
+- [x] Spot Interrupt Handler
+- Kube-state-metrics
+- [Priority Expander](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md)
+- [Event Router](https://github.com/heptiolabs/eventrouter)
 
 ## Docs and other additional resources
 

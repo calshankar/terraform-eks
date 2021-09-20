@@ -60,7 +60,7 @@ data "aws_vpc_endpoint_service" "s3" {
   service_type = "Interface"
   filter {
     name   = "service-name"
-    values = ["*s3*"]
+    values = ["*us-east-1.s3*"]
   }
 }
 
